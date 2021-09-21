@@ -1,0 +1,47 @@
+plugins {
+    id 'java'
+    id 'java-library'
+    id 'jacoco'
+}
+
+jacoco {
+    toolVersion = "0.8.5" //jacoco version
+    reportsDir = file("$buildDir/reports/jacoco") //default directory where jacoco generates test reports
+}
+
+//if you want to use custom report format then uncomment below task
+//use command "gradle build jacocoTestReport" to generate reports using below task
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = false
+        csv.required = false
+        html.outputLocation = layout.buildDirectory.dir('jacocoHtml')
+    }
+}
+test {
+    ignoreFailures = true //build success even when test failure occurs
+    finalizedBy jacocoTestReport // report is always generated after tests run
+}
+
+repositories {
+    jcenter()
+}
+
+configurations {
+    ddTracerAgent
+}
+
+dependencies {
+    ddTracerAgent "com.datadoghq:dd-java-agent:0.87.0"
+    testImplementation('junit:junit:4.12') {
+        exclude group: 'org.hamcrest'
+    }
+
+    testImplementation 'org.hamcrest:hamcrest-library:2.2'
+}
+test {
+    if(project.hasProperty("dd-civisibility")) {
+        jvmArgs = ["-javaagent:${configurations.ddTracerAgent.asPath}", "-Ddd.service=my-java-app", "-Ddd.prioritization.type=ENSURE_TRACE", "-Ddd.jmxfetch.enabled=false", "-Ddd.integrations.enabled=false", "-Ddd.integration.junit.enabled=true", "-Ddd.integration.testng.enabled=true"]
+    }
+}
